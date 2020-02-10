@@ -1,0 +1,143 @@
+## Create five tables for doctor data
+
+CREATE TABLE addresses (
+address_id char(9),
+street varchar(60) NOT NULL,
+city varchar(40) NOT NULL,
+state varchar(40), 
+zip_code varchar(10) NOT NULL,
+country varchar(40) NOT NULL,
+PRIMARY KEY (address_id)
+);
+
+CREATE TABLE clinics(
+clinic_id char(9),
+address_id char(9),
+name varchar(60) NOT NULL,
+PRIMARY KEY (clinic_id),
+FOREIGN KEY (address_id) REFERENCES addresses
+);
+
+CREATE TABLE patients (
+patient_id char(9),
+address_id char(9),
+name varchar(60) NOT NULL,
+gender varchar(17) NOT NULL,
+dob date NOT NULL,
+PRIMARY KEY (patient_id),
+FOREIGN KEY (address_id) REFERENCES addresses
+);
+
+CREATE TABLE doctors (
+doctor_id char(9),
+address_id char(9),
+clinic_id char(9),
+name varchar(60) NOT NULL,
+specialty varchar(60) NOT NULL,
+PRIMARY KEY (doctor_id),
+FOREIGN KEY (address_id) REFERENCES addresses,
+FOREIGN KEY (clinic_id) REFERENCES clinics
+);
+
+
+CREATE TABLE examinations (
+patient_id char(9),
+doctor_id char(9),
+exam_date timestamp with time zone,
+exam_cost integer NOT NULL,
+exam_notes varchar,
+PRIMARY KEY (patient_id, doctor_id, exam_date),
+FOREIGN KEY (patient_id) REFERENCES patients,
+FOREIGN KEY (doctor_id) REFERENCES doctors
+);
+
+## Explanation for code
+
+For the table addresses, I set the attribute address_id’s data type as char since all
+the entries in the column should be the same length since all the ids will have the same 
+length (which I set as 9 to allow for enough permutations). I set the three attributes street, 
+city, and state with the data type varchar since each entry will have varying character lengths.
+Furthermore, the length for street was set as 60 to allot for long address names and the city and 
+state lengths were set at 40 since the length of names are typically less than 40 characters. 
+The zip_code attribute has the data type varchar since there are addresses recorded from different 
+countries and there are varying lengths for addresses in different countries. The longest zip code 
+length in the world is 10, therefore the data length was set at 10 for zip_code. The attribute country 
+was also set as varchar(40) since there are varying character lengths in the names of different countries
+that are largely under 40 characters. The primary key was identified as the attribute address_id since 
+it is a unique number that identifies each address in the table. Finally, the attributes street, city, 
+zip_code, and country were given the constraint not null since the values cannot be blank if they are 
+to properly locate an address. The attribute state was not given this constraint since some countries 
+do not use “states” to divide up their lands, instead preferring principalities or districts.
+In the table clinics, I assigned the attributes clinic_id and address_id with the data type char(9) 
+since these columns will have values with the length of 9 characters for every entry. Name was assigned 
+the data type varchar(60) since there will be clinic names with vary length entered into the table. 
+Clinic_id was identified as the primary key since it is a unique number that identifies each clinic 
+in the table. The attribute address_id was identified as a foreign key that references the table 
+addresses since the attribute address_id is contained in the table addresses as a primary key. The
+attribute name was given the constraint not null since the name of the clinic is an important entry 
+into the table used to identify clinics. The attributes clinic_id and address_id where not given the 
+constraints not null since it is automatically included when the attribute is identified as a primary 
+key. The address_id attribute was identified as a primary key in the address table so there are no null 
+values being referenced for the clinics table. In the table patients, patient_id and address_id were given
+the data type char(9) as explained above for previous ids. The attribute name was given the data type 
+varchar(60) since the names of various patients will vary in length and the likelihood of the name being 
+longer than 60 characters is low. Gender was assigned the data type varchar with the length 17 since the 
+answer with the highest character count is “Prefer not to say”. I assigned the attribute dob the data type
+date since date of birth only records the day/month/year of birth without a time stamp. Patient_id was 
+identified as the primary key in the patients table since it is a unique number that identifies each 
+patient in the table. Address_id was identified as a foreign key since it is a primary key in the 
+addresses table. The attributes name, gender and dob were given the constraints not null since they 
+contain valuable information that the doctor will need to view when looking up a patient’s info in the 
+table. In the table doctors, doctor_id, address_id, and clinic_id were given the data type char(9) for the 
+same reasons as explained for the previous tables. Name was given the data_type varchar(60) since the names 
+of various doctors will vary in length and the likelihood of the name being longer than 60 characters is 
+low. The attribute specialty was given the data type varchar(60) since the doctor may have a variety of
+different specialties that vary in character length. The doctor_id was identified as the primary key in 
+the doctors table since it is a unique number that identifies each doctor in the table. Address_id was 
+identified as a foreign key since it is a primary key in the addresses table and clinic_id was identified
+as a foreign key since it is a primary key in the clinics table. The attributes name and specialty were
+given the constraints not null since they are important values that should not be blank when someone
+queries the doctor table. The other attributes were not given constraints since they are either primary
+keys or foreign keys that are primary keys in their original referenced tables. In the table examinations,
+the attributes patient_id and doctor_id were assigned the data type char(9) for the same reasons as 
+explained for the other tables. The attribute exam_date was assigned the data type timestamp with time zone
+since the exam date column needs to log the day/month/year and time of each exam. Furthermore, the
+time zone needs to be taken into consideration since there will be data collected from different countries
+in different time zones. Exam_cost was assigned the data type integer since it is recording a money amount 
+and therefore all entries will be integers. Exam_notes was assigned the data type varchar without any
+length constraint since each doctor will have notes of varying different lengths on each examination. 
+I listed the attributes patient_id, doctor_id, and exam_date as the primary key since the main identifiers 
+for an exam are the participants and when it occurred. Originally, the assignment only listed the 
+patient_id and doctor_id as the primary key, however a patient may have multiple exams with the same doctor.
+This made it necessary to include the date (and time) at which the exam occurred in the primary key to 
+ensure that a query will return the correct exam. Patient_id was identified as a foreign key since it 
+is a primary key in the patients table and doctor_id was identified as a foreign key since it is a
+primary key in the doctors table. Exam_cost was given the constraint not null since the column contain 
+important information that should not be blank when someone queries the examinations table. If there is
+an issue with billing, it is important that the clinic has the cost of each exam for each patient on record.
+Exam_notes has no constraint since it is possible the doctor has no notes to record on a particular 
+examination. The other attributes were not given constraints since they are either primary keys or 
+foreign keys that are primary keys in their original referenced tables. It was necessary to create the
+requested tables in a certain order since some tables referenced others with the use of foreign keys.
+My table order was: addresses, clinics, patients, doctors, and examinations. The table examinations 
+referenced patients with the use of foreign key patient_id and also referenced doctors with the 
+foreign key doctor_id. The table doctors referenced addresses with the use of the foreign key address_id
+and referenced clinics with the foreign key clinic_id. Finally, both tables patients and clinics
+referenced the table addresses through the use of the foreign key address_id. Based off of these 
+foreign keys, there were a few different orders to successfully create the assigned tables. The code 
+would execute as long as the table addresses was created first, the table clinics was created before 
+doctors, and the tables patients and doctors were created before examinations (hence the order I chose). 
+This final paragraph will explain the cardinalities between the tables in this assignment. There is a many 
+to one relationship between the clinics and addresses tables. A clinic is associated with at most one
+address, and an address is associated with several (including 0) clinics. There can be several clinics 
+at the same address since many clinics share offices, especially in hospitals. There is a many to one 
+relationship between the doctors and addresses tables. A doctor is associated with at most one address, 
+and an address is associated with several (including 0) doctors. There is a many to one relationship
+between the patients and addresses tables. A patient is associated with at most one address, and an 
+address is associated with several (including 0) patients. For example, in the case that there are
+multiple family members in the system that live in the same family house. There is a many to many 
+relationship between the doctors and patients tables that is connected by the relationship set examinations.
+A doctor can be associated with several (including 0) patients, and a patient can be associated with several 
+(including 0) doctors since they may see various different specialists. There is a many to one relationship 
+between the doctors and clinics tables. A doctor is associated with at most one clinic, and a clinic is 
+associated with several (including 0) doctors. 
