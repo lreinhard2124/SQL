@@ -1,0 +1,32 @@
+## SQL statement that returns the station, name, date, time, hourly_temp and rank of hourly temperatures. 
+
+SELECT station, name, date, time, hourly_temp, 
+DENSE_RANK() OVER (ORDER BY hourly_temp DESC) as rank_temp
+FROM weather_data
+;
+
+
+## SQL statement that returns the station, name, date, time, hourly_temp and rank of hourly temperatures for each station. 
+
+SELECT station, name, date, time, hourly_temp, 
+RANK() OVER (PARTITION BY name ORDER BY hourly_temp DESC) as rank_temp
+FROM weather_data
+ORDER BY name, rank_temp;
+
+
+## SQL statement that returns the station, name, date, time and moving average of hourly wind speeds on a 3 hour window. 
+## Calculation must be per station.
+
+SELECT station, name, date, time, AVG(hourly_wind) OVER     
+(PARTITION BY station ORDER BY station, date, time ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) 
+AS avg_wind_3_hr_window
+FROM weather_data;
+
+
+## SQL statement that returns the station, name, date, hourly temperature and daily average temperature per station.
+
+SELECT station, name, date, hourly_temp, AVG(hourly_temp) OVER     
+(PARTITION BY station, date ORDER BY station, date) 
+AS avg_daily_temp
+FROM weather_data
+ORDER BY station, date, time;
