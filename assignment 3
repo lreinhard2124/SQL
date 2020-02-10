@@ -1,0 +1,206 @@
+## table creation
+
+CREATE TABLE employers (
+id varchar(8),
+name varchar(40) NOT NULL,
+address varchar(100),
+phone char(10) NOT NULL,
+email varchar(60) UNIQUE NOT NULL,
+PRIMARY KEY (id)
+);
+
+
+CREATE TABLE jobs (
+id varchar(8),
+emp_id varchar(8),
+title varchar(30) NOT NULL,
+start_date date NOT NULL,
+post_date timestamp NOT NULL,
+min_gpa numeric(3,2) NOT NULL CONSTRAINT min_gpa_range CHECK (min_gpa BETWEEN 0 AND 4),       
+salary numeric(7,2) NOT NULL CONSTRAINT positive_salary CHECK (salary >= 0),  
+description varchar, 
+PRIMARY KEY (id),
+FOREIGN KEY (emp_id) REFERENCES employers (id) 
+ON DELETE CASCADE 
+ON UPDATE CASCADE
+);
+
+
+CREATE TABLE job_skills (
+job_id varchar(8),
+job_skill varchar(40),      
+PRIMARY KEY (job_id, job_skill),
+FOREIGN KEY (job_id) REFERENCES jobs (id) 
+ON DELETE CASCADE 
+ON UPDATE CASCADE
+);
+
+
+CREATE TABLE students (
+id varchar(8),
+name varchar(40) NOT NULL,
+email varchar(60) UNIQUE NOT NULL,          
+major varchar(40) NOT NULL,        
+degree varchar(40) NOT NULL CONSTRAINT degree_level_test
+CHECK (degree='Associate’s' OR degree='Bachelor’s' OR degree='Master’s' OR degree= 'Doctorate' OR degree= 'Visiting'),      
+gpa numeric(3,2) NOT NULL CONSTRAINT gpa_range CHECK (gpa BETWEEN 0 AND 4),
+graduation_date date NOT NULL,  
+PRIMARY KEY (id)
+);
+
+
+CREATE TABLE student_skills (
+student_id varchar(8),
+student_skill varchar(40),       
+PRIMARY KEY (student_id, student_skill),
+FOREIGN KEY (student_id) REFERENCES students (id)
+ON DELETE CASCADE 
+ON UPDATE CASCADE
+);
+
+
+CREATE TABLE applications (
+student_id varchar(8),
+job_id varchar(8),
+date_submitted timestamp NOT NULL, 
+PRIMARY KEY (student_id, job_id),
+FOREIGN KEY (student_id) REFERENCES students (id)
+ON DELETE CASCADE 
+ON UPDATE CASCADE,
+FOREIGN KEY (job_id) REFERENCES jobs (id)
+ON DELETE CASCADE 
+ON UPDATE CASCADE
+);
+
+
+CREATE TABLE interviews (
+job_id varchar(8),
+student_id varchar(8),
+interview_date timestamp NOT NULL, 
+offer_made varchar(15) NOT NULL CONSTRAINT offer_made_test 
+CHECK (offer_made ='no offer' OR offer_made ='offer accepted' OR offer_made ='offer rejected'),
+PRIMARY KEY (job_id, student_id, interview_date),
+FOREIGN KEY (job_id) REFERENCES jobs (id)
+ON DELETE CASCADE 
+ON UPDATE CASCADE,
+FOREIGN KEY (student_id) REFERENCES students (id)
+ON DELETE CASCADE 
+ON UPDATE CASCADE
+);
+
+
+##  SQL statement that returns the job id, employer name, job name, and post date/time of all job listings that a 
+## student named 'Louise Belcher' may be qualified for (meaning, she has a high-enough GPA and at least one of
+## her skills is also listed as a skill for the job).
+
+SELECT DISTINCT J.id, E.name, J.title, J.post_date
+FROM jobs AS J, employers AS E, students AS S, student_skills AS SS, job_skills AS JS
+WHERE S.name =  'Louise Belcher'
+AND S.id = SS.student_id
+AND E.id = J.emp_id
+AND J.id = JS.job_id
+AND SS.student_skill  = JS.job_skill   
+AND S.gpa >= J.min_gpa;
+
+
+## SQL statement that creates a view called "ny_jobs". Returns the job id, company name, and job name of any job
+## posted by a company in New York. further limit results to jobs posted in September 2019.
+
+CREATE VIEW ny_jobs AS 
+SELECT DISTINCT J.id, E.name, J.title
+FROM(SELECT E.phone, J.post_date
+FROM employers AS E, jobs AS J
+WHERE E.phone LIKE '212%' OR E.phone LIKE '646%' OR E.phone LIKE '718%')
+AS nyc_company, jobs AS J, employers AS E
+WHERE E.id = J.emp_id
+AND E.phone=nyc_company.phone;
+
+SELECT ny_jobs_view.id, ny_jobs_view.name, ny_jobs_view.title FROM 
+(SELECT id, name, title
+FROM ny_jobs) AS ny_jobs_view NATURAL JOIN 
+(SELECT J.post_date, J.id
+FROM jobs AS J
+WHERE J.post_date BETWEEN '09/01/2019 00:00:00' and '09/30/2019 24:00:00') AS job_view
+WHERE ny_jobs_view.id=job_view.id;
+
+
+## SQL statement that returns the job id and job name of the job that received the most applications.
+
+SELECT count_a.id, count_a.title
+FROM (SELECT J.id, J.title, COUNT(A.job_id) AS app_count,
+             RANK() OVER (ORDER BY COUNT(A.job_id) DESC) as order_num
+      FROM jobs AS J, applications AS A
+	  WHERE J.id=A.job_id
+      GROUP BY J.id, J.title
+     ) count_a
+WHERE order_num = 1;
+
+
+## SQL statement that returns the name of any student who did more than two (2) interviews without getting a single offer.
+
+SELECT DISTINCT S.name
+FROM (SELECT I.student_id, COUNT(I.interview_date) AS count
+FROM interviews AS I
+GROUP BY student_id) as interview_count, students AS S, interviews AS I
+WHERE S.id = interview_count.student_id
+AND interview_count.count > 2 
+AND I.offer_made = 'no offer' ;
+
+
+## SQL statement that returns names of all students who are experienced in both 'Python' and 'R'.
+
+SELECT DISTINCT S.name
+FROM (SELECT SS.student_id
+FROM student_skills AS SS
+WHERE SS.student_skill = 'Python') AS python,
+(SELECT SS.student_id
+FROM student_skills AS SS
+WHERE SS.student_skill = 'R') AS R, students AS S
+WHERE S.id=R.student_id
+AND S.id=python.student_id
+AND R.student_id=python.student_id;
+
+## SQL statement that for each skill (either job skill or student skill) it returns the number of jobs looking for it and the number of
+## students having it.
+
+SELECT DISTINCT * FROM
+(SELECT skills_list.student_skill, skills_have.count_student_skills_have FROM
+(SELECT DISTINCT SS.student_skill FROM student_skills AS SS UNION SELECT DISTINCT JS.job_skill
+FROM job_skills AS JS) AS skills_list LEFT OUTER JOIN 
+(SELECT SS.student_skill, COUNT(SS.student_skill) AS count_student_skills_have
+FROM student_skills AS SS, students AS S
+WHERE SS.student_id = S.id
+GROUP BY SS.student_skill) AS skills_have
+ON skills_list.student_skill = skills_have.student_skill) AS have_skills
+NATURAL JOIN
+(SELECT skills_list.student_skill, skills_wanted.count_job_skills_wanted FROM
+(SELECT DISTINCT SS.student_skill FROM student_skills AS SS UNION SELECT DISTINCT JS.job_skill
+FROM job_skills AS JS) AS skills_list LEFT OUTER JOIN 
+(SELECT JS.job_skill, COUNT(JS.job_skill) AS count_job_skills_wanted
+FROM job_skills AS JS, jobs AS J
+WHERE JS.job_id = J.id
+GROUP BY JS.job_skill) AS skills_wanted
+ON skills_list.student_skill = skills_wanted.job_skill) AS want_skills
+WHERE have_skills.student_skill = want_skills.student_skill;
+
+
+## SQL statements that create a trigger. The trigger must ensure that when a new tuple is attempted to be inserted into the
+## "interviews" table, then this tuple will only be stored if the student has a gpa higher than the minimum gpa required for 
+## the job. If the student has a lower gpa then the trigger should return an error.
+
+CREATE OR REPLACE FUNCTION gpa_trigger()
+RETURNS trigger AS
+$body$
+BEGIN 
+IF (SELECT S.gpa FROM students AS S WHERE s.id=New.student_id) < 
+(SELECT J.min_gpa FROM jobs AS J WHERE j.id=NEW.jobs_id) THEN
+RAISE EXCEPTION 'ERROR: Student gpa does not satisfy job gpa requirement';
+END IF;
+RETURN NEW;
+END;
+$body$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER gpa_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON interviews
+FOR EACH ROW EXECUTE PROCEDURE gpa_trigger();
